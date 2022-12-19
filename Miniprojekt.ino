@@ -33,18 +33,13 @@ Zumo32U4ButtonC buttonC;
 // Zumo32U4LCD display;
 Zumo32U4LCD display;
 
-bool useEmitters = true;
-
 int16_t lastError = 0;
-
-int buttonPressed = 0;
 
 int16_t leftSpeed = 0;
 int16_t rightSpeed = 0;
 
 bool found = false;
 // left is 1500, right is 500, center is 1000
-bool turned = false;
 int check = 0;
 bool beep = false;
 //bool waitForCan = false;
@@ -59,6 +54,7 @@ int turnAngleprop = 0;
 int Gyro = 0;
 //double gyroOffset = 0;
 int calibrationReadings = 1024;
+int newAngle = 0;
 
 // file containing most of the gyro funtuions
 #include "TurnSensor.h"
@@ -162,27 +158,11 @@ void showReadings()
       uint8_t barHeight = map(lineSensorValues[i], 0, 1000, 0, 8);
       printBar(barHeight);
     }
-    //printserial();
     updateGyro();
 
     }
-  Serial.println("Button Pressed:");
-  Serial.println(buttonPressed);
 }
 
-void printserial()
-{
-    char buffer[80];
-    sprintf(buffer, "%4d %4d %4d %4d %4d %c\n",
-      lineSensorValues[0],
-      lineSensorValues[1],
-      lineSensorValues[2],
-      lineSensorValues[3],
-      lineSensorValues[4],
-      useEmitters ? 'E' : 'e'
-    );
-    Serial.print(buffer);
-}
 
 void setup()
 {
@@ -259,7 +239,6 @@ void waitForCan()
       motors.setSpeeds(maxSpeed*0.5, maxSpeed*0.5);
     }
     updateProxSensors();
-    turned == false;
     returnLine1();
 
   }
@@ -323,7 +302,6 @@ void waitForCan()
     updateProxSensors();
     turnAngleprop = 0;
     updateGyro();
-    turned == false;
     // return from pushing close can
     returnLine2();
   }
@@ -439,41 +417,36 @@ void returnLine2()
   //turn 90 to the left, drive a bit foward then turn to the left again at 90
   turnAngleprop = 0;
   updateGyro();
-  if (!turned)
+  newAngle = 90;
+  turnSensorReset();
+  turnAngleprop = 0;
+  while (turnAngleprop != newAngle)
   {
-    turned = true;
-    newAngle = 90;
-    turnSensorReset();
-    turnAngleprop = 0;
-    while (turnAngleprop != newAngle)
-    {
-      updateGyro();
-      // subtract the current angle from the angle you want to be at
-      // the constant outside the () is to increase the speed 
-      int32_t turnSpeed = (newAngle-turnAngleprop)*20;
-      turnSpeed = constrain(turnSpeed, -maxSpeed, maxSpeed);
-      motors.setSpeeds(-turnSpeed, turnSpeed);
-    }
-    motors.setSpeeds(neutralSteering, neutralSteering);
-    delay(700);
-    newAngle = 90;
-    turnSensorReset();
-    turnAngleprop = 0;
-    while (turnAngleprop != newAngle)
-    {
-      updateGyro();
-      int32_t turnSpeed = (newAngle-turnAngleprop)*20;
-      turnSpeed = constrain(turnSpeed, -maxSpeed, maxSpeed);
-      motors.setSpeeds(-turnSpeed, turnSpeed);
-    }
-
-    //reverse directions so that later in findline() so it turns to the left instead of right
-    neutralSteering = -neutralSteering;
-    // resets the check as if it starts this on a line, then without this it will save it for later and instantly trigger the "lost line" functiunality in findline()
-    check = 0;
+    updateGyro();
+    // subtract the current angle from the angle you want to be at
+    // the constant outside the () is to increase the speed 
+    int32_t turnSpeed = (newAngle-turnAngleprop)*20;
+    turnSpeed = constrain(turnSpeed, -maxSpeed, maxSpeed);
+    motors.setSpeeds(-turnSpeed, turnSpeed);
   }
+  motors.setSpeeds(neutralSteering, neutralSteering);
+  delay(700);
+  newAngle = 90;
+  turnSensorReset();
+  turnAngleprop = 0;
+  while (turnAngleprop != newAngle)
+  {
+    updateGyro();
+    int32_t turnSpeed = (newAngle-turnAngleprop)*20;
+    turnSpeed = constrain(turnSpeed, -maxSpeed, maxSpeed);
+    motors.setSpeeds(-turnSpeed, turnSpeed);
+  }
+
+  //reverse directions so that later in findline() so it turns to the left instead of right
+  neutralSteering = -neutralSteering;
+  // resets the check as if it starts this on a line, then without this it will save it for later and instantly trigger the "lost line" functiunality in findline()
+  check = 0;
   found = false;
-  turned = false;
   findline();
 }
 
