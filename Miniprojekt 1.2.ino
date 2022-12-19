@@ -47,7 +47,6 @@ bool found = false;
 bool turned = false;
 int check = 0;
 bool beep = false;
-bool correction = false;
 //bool waitForCan = false;
 
 
@@ -346,13 +345,10 @@ void stop()
     // noise to indicate that it has fully stopped
     display.clear();
     display.print(F("STOP!"));
-    if (!beep)
-    {
-      buzzer.play(">a32>>g32>>c32");
-      beep = true;
-    }
+    // play sound to indicate it stopped
+    buzzer.play(">a32>>g32>>c32");
+    beep = true;
 
-    
     motors.setSpeeds(0, 0);
     turnSensorUpdate();
     updateGyro();
@@ -371,8 +367,6 @@ void findline()
   int16_t position = lineSensors.readLine(lineSensorValues);
   Serial.println("position:");
   Serial.println(position);
-  
-
   // Our "error" is how far we are away from the center of the
   // line, which corresponds to position 2000.
   int16_t error = position - 2000;
@@ -400,17 +394,7 @@ void findline()
     //stops the zumo if both the edge sensors are detecting a line but the center sensor isn't
     else if (lineSensorValues[0] <= threshhold[0] and lineSensorValues[4] <= threshhold[4] and lineSensorValues[2] >= threshhold[2])
     {
-      if (!correction)
-      {
-        motors.setSpeeds(-neutralSteering, -neutralSteering);
-        delay(250);
-        correction = true;
-      }
-      else
-      {
-        correction = false;
-        stop();
-      }
+      stop();
     }
 
     //If the zumo loses the line it was following, it will turn until the center sensor finds a line again.
@@ -423,7 +407,6 @@ void findline()
         updateGyro();
         motors.setSpeeds(neutralSteering, -neutralSteering);
         lineSensors.readLine(lineSensorValues);
-        //delay(5);
       }
       neutralSteering = 200;
     }
@@ -497,9 +480,7 @@ void returnLine2()
 
 void loop()
 {
-  position = lineSensors.readLine(lineSensorValues);
   updateGyro();
-
   //starts by going through all sensors and checking they detect something and if any of them do, then it found the line
   check = 0;
   for (uint8_t i = 0;  i < NUM_SENSORS; i++)
